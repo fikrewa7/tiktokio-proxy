@@ -1,10 +1,9 @@
-// api/tiktok.js
-export const config = { runtime: "nodejs18.x" };
+// api/tiktok.js — NO runtime config needed
 
 const UPSTREAM = "https://tiktokio.app/download.php";
 
 export default async function handler(req, res) {
-  // CORS — allow your frontend origin(s). Use "*" for testing.
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -40,7 +39,6 @@ export default async function handler(req, res) {
 
     const text = await upstream.text();
 
-    // Pass through status; try to parse JSON, fall back to raw text
     let data;
     try {
       data = JSON.parse(text);
