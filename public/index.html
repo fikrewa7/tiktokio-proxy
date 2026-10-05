@@ -906,7 +906,12 @@
     if (!current?.thumbnail) return;
     setLoading(dlThumb, true);
     try {
-      await downloadWithProgress(current.thumbnail, safeName(current.title + " - thumb", "jpg"), false, "thumbnail");
+      await downloadWithProgress(
+        current.thumbnail,
+        buildFilename(current, "jpg", "thumbnail"),
+        false,
+        "thumbnail"
+      );
     } catch (e) {
       console.error(e);
       toast("Thumbnail failed: " + e.message, "err");
