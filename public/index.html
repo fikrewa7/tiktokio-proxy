@@ -658,12 +658,31 @@
     return n.toFixed(n < 10 && i > 0 ? 1 : 0) + " " + u[i];
   }
 
-  function safeName(s, ext) {
-    return (s || "video")
-      .replace(/[\\/:*?"<>|#]+/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 70) + "." + ext;
+  function slug(s, max = 30) {
+    return (s || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^[_\-.]+|[_\-.]+$/g, "")
+      .slice(0, max) || "video";
+  }
+
+  function stamp(d = new Date()) {
+    const p = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  }
+
+  // Prefer the numeric TikTok ID. Falls back to uploader_timestamp if missing.
+  function buildFilename(data, ext, kind = "video") {
+    const suffix = kind === "thumbnail" ? "_thumb" : "";
+    if (data.video_id) {
+      return `${data.video_id}${suffix}.${ext}`;
+    }
+    const user = slug(data.uploader, 20);
+    const ts   = stamp();
+    return `${user}_${ts}${suffix}.${ext}`;
   }
 
   function extractUrl(text) {
