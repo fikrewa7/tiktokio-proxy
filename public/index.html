@@ -887,7 +887,12 @@
     if (!current?.stream_url) return;
     setLoading(dlVideo, true);
     try {
-      await downloadWithProgress(current.stream_url, safeName(current.title, "mp4"), true, "video");
+      await downloadWithProgress(
+        current.stream_url,
+        buildFilename(current, "mp4", "video"),
+        true,
+        "video"
+      );
     } catch (e) {
       console.error(e);
       toast("Download failed: " + e.message, "err");
