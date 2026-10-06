@@ -27,7 +27,8 @@ export default async function handler(req) {
     return json({ error: 'fetch failed', detail: String(err.message || err) }, 502, cors);
   }
 
-  const html = await upstream.text();
+  const buf = await upstream.arrayBuffer();
+const html = new TextDecoder('utf-8').decode(buf);
 
   const match = html.match(
     /<script id="__FRONTITY_CONNECT_STATE__" type="application\/json">([\s\S]*?)<\/script>/
