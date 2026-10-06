@@ -1,20 +1,17 @@
-// api/oembed.js
-// Proxies TikTok's oEmbed endpoint with in-memory + CDN caching.
+// api/oembed.js  —  ESM version (matches "type": "module")
 // Usage:  GET /api/oembed?url=https://www.tiktok.com/@tiktok
 
 const TIKTOK_OEMBED = 'https://www.tiktok.com/oembed';
-const TTL_MS        = 60 * 60 * 1000;   // 1h in-memory cache (per lambda instance)
+const TTL_MS        = 60 * 60 * 1000;
 const MAX_ENTRIES   = 200;
-const UPSTREAM_MS   = 8000;             // abort slow upstream requests
+const UPSTREAM_MS   = 8000;
 
-// Simple LRU-ish in-memory cache. Survives warm invocations, dies on cold start.
 const mem = new Map();
 
 function memGet(k) {
   const hit = mem.get(k);
   if (!hit) return null;
   if (Date.now() - hit.t > TTL_MS) { mem.delete(k); return null; }
-  // refresh recency
   mem.delete(k); mem.set(k, hit);
   return hit.v;
 }
@@ -23,8 +20,7 @@ function memSet(k, v) {
   mem.set(k, { t: Date.now(), v });
 }
 
-module.exports = async function handler(req, res) {
-  // ── CORS ────────────────────────────────────────────────
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
@@ -36,7 +32,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // ── Validate input ──────────────────────────────────────
   const raw = req.query && req.query.url;
   if (!raw || typeof raw !== 'string') {
     res.status(400).json({ error: 'Missing ?url= query param' });
@@ -47,14 +42,12 @@ module.exports = async function handler(req, res) {
   try { parsed = new URL(raw); }
   catch { res.status(400).json({ error: 'Invalid URL' }); return; }
 
-  // SSRF guard: allow only tiktok.com and its subdomains
   const host = parsed.hostname.toLowerCase();
   if (host !== 'tiktok.com' && !host.endsWith('.tiktok.com')) {
     res.status(400).json({ error: 'Only tiktok.com URLs are allowed' });
     return;
   }
 
-  // ── Cache lookup ────────────────────────────────────────
   const cached = memGet(raw);
   if (cached) {
     res.setHeader('X-Cache',       'HIT-MEM');
@@ -63,7 +56,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // ── Fetch upstream ──────────────────────────────────────
   const upstreamURL = `${TIKTOK_OEMBED}?url=${encodeURIComponent(raw)}`;
   const controller  = new AbortController();
   const timer       = setTimeout(() => controller.abort(), UPSTREAM_MS);
@@ -72,7 +64,7 @@ module.exports = async function handler(req, res) {
     const upstream = await fetch(upstreamURL, {
       signal:  controller.signal,
       headers: {
-        Accept:     'application/json',
+        Accept:       'application/json',
         'User-Agent': 'Mozilla/5.0 (compatible; TikTokOEmbedProxy/1.0)',
       },
     });
@@ -81,7 +73,6 @@ module.exports = async function handler(req, res) {
     const text = await upstream.text();
 
     if (!upstream.ok) {
-      // Pass through the upstream status so the client can decide what to do.
       res.status(upstream.status)
          .setHeader('X-Upstream-Status', String(upstream.status))
          .json({
@@ -116,4 +107,4 @@ module.exports = async function handler(req, res) {
       detail: String((err && err.message) || err),
     });
   }
-};
+}
